@@ -25,12 +25,12 @@ if st.button("Buscar"):
         # Aplica filtro
         resultado = df[df["busca"].apply(lambda texto: any(t in texto for t in termos))]
 
-        # Remove a coluna auxiliar e reseta o índice
-        resultado = resultado.drop(columns=["busca"]).reset_index(drop=True)
+        # Remove a coluna auxiliar
+        resultado = resultado.drop(columns=["busca"])
 
         # Exibe os resultados sem a coluna de índice
         st.success(f"{len(resultado)} item(ns) encontrado(s).")
-        st.dataframe(resultado, use_container_width=True)
+        st.dataframe(resultado, use_container_width=True, hide_index=True)
 
     except Exception as e:
         st.error(f"Ocorreu um erro: {e}")
