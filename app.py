@@ -1,34 +1,42 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(layout="wide")
+# --- Configurações iniciais da página ---
+st.set_page_config(
+    page_title="Pesquisa de Itens - Bioenergética Aroeira",
+    layout="wide",
+)
 
-st.image("logo_aroeira.png", width=80)
-st.markdown("## 🔍 Pesquisa de Itens - Bioenergética Aroeira")
+# --- Logo e título ---
+col1, col2 = st.columns([1, 20])
+with col1:
+    st.image("logo_aroeira.png", width=80)
+with col2:
+    st.markdown(
+        "<h1 style='color:#001858; font-weight:700;'>🔍 Pesquisa de Itens - Bioenergética Aroeira</h1>",
+        unsafe_allow_html=True
+    )
 
-uploaded_file = "Pesquisa de itens.xlsm"
+# --- Caixa de entrada ---
+st.markdown("Digite os códigos ou palavras separadas por vírgula ou enter:")
+codigos = st.text_area("", height=70)
 
-try:
-    df = pd.read_excel(uploaded_file, sheet_name="Base")
-except Exception as e:
-    st.error(f"Erro ao carregar planilha: {e}")
-    st.stop()
-
-termo = st.text_area("Digite os códigos ou palavras separadas por vírgula ou enter:")
-
+# --- Botão de busca ---
 if st.button("Buscar"):
-    if not termo.strip():
-        st.warning("Digite ao menos um código ou palavra.")
-    else:
-        codigos = termo.replace(",", "\n").splitlines()
-        lista_codigos = [c.strip() for c in codigos if c.strip()]
+    try:
+        # --- Leitura da aba "Base" ---
+        df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Base")
 
-        filtro = pd.Series([False] * len(df))
-        for c in lista_codigos:
-            filtro |= df.apply(lambda row: row.astype(str).str.contains(c, case=False, na=False).any(), axis=1)
+        # --- Limpeza e tratamento dos termos de busca ---
+        lista_codigos = [c.strip().lower() for c in codigos.replace(",", "\n").splitlines() if c.strip()]
 
-        resultado = df[filtro]
+        # --- Verifica se a coluna 'Código' existe ---
+        if "Código" not in df.columns and "Código".lower() not in df.columns.str.lower():
+            st.error("Coluna 'Código' não encontrada na planilha.")
+        else:
+            # --- Padroniza colunas para busca textual também nas descrições ---
+            df["Código"] = df["Código"].astype(str)
+            df["Descrição"] = df["Descrição"].astype(str)
+            df["Descrição reduzida"] = df.get("Descrição reduzida", "").astype(str)
 
-        total = len(resultado)
-        st.success(f"{total} item(ns) encontrado(s).")
-        st.dataframe(resultado, use_container_width=True)
+            # --- Concatena os campo
