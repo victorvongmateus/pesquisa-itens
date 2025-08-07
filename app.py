@@ -1,44 +1,53 @@
 import streamlit as st
 import pandas as pd
 
+st.set_page_config(page_title="Pesquisa de Itens - Bioenergética Aroeira", layout="centered")
+
+# Logo
+st.image("logo_aroeira.png", width=100)
+
 # Título
-st.set_page_config(page_title="Pesquisa de Itens", layout="wide")
-st.title("🔍 Pesquisa de Itens - Bioenergética Aroeira")
-st.image("logo_aroeira.png", width=200)
+st.markdown("## 🔍 Pesquisa de Itens - Bioenergética Aroeira")
 
 # Upload da planilha
-arquivo = "Pesquisa de itens.xlsm"
-try:
-    df = pd.read_excel(arquivo, sheet_name="Base")
-except Exception as e:
-    st.error(f"Erro ao ler o arquivo: {e}")
-    st.stop()
+uploaded_file = "Pesquisa de itens.xlsm"
+
+@st.cache_data
+def carregar_dados():
+    try:
+        df = pd.read_excel(uploaded_file, sheet_name="Base")
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar a planilha: {e}")
+        return pd.DataFrame()
+
+df = carregar_dados()
 
 # Entrada do usuário
-codigos = st.text_area("Digite os códigos separados por vírgula ou enter:")
+codigos = st.text_area("Digite os códigos separados por vírgula ou enter:", height=100)
 
-if st.button("Buscar"):
-    if codigos.strip() == "":
-        st.warning("Digite ao menos um código para buscar.")
+# Botão de busca
+if st.button("Buscar") and codigos:
+    # Processamento dos códigos
+    lista_codigos = [
+        c.strip()
+        for c in codigos.replace(",", "\n").splitlines()
+        if c.strip()
+    ]
+
+    if df.empty:
+        st.warning("Nenhum dado foi carregado.")
     else:
-        # Processa os códigos
-        lista_codigos = [c.strip() for c in codigos.replace(",", "\n").splitlines() if c.strip()]
+        # Tenta localizar a coluna com nome semelhante a "Código"
+        col_codigo = next((col for col in df.columns if "código" in col.lower()), None)
 
-        # Filtra o DataFrame
-        resultado = df[df["Código"].astype(str).isin(lista_codigos)]
-
-        if resultado.empty:
-            st.warning("Nenhum resultado encontrado.")
+        if not col_codigo:
+            st.error("Coluna 'Código' não encontrada na planilha.")
         else:
-            # Mostra a tabela com colunas específicas
-            colunas_desejadas = [
-                "Código", "Descrição", "Descrição reduzida", "Situação",
-                "Unidade", "Mín", "Máx", "R$ médio"
-            ]
-            resultado = resultado[colunas_desejadas]
-            st.success(f"{len(resultado)} item(ns) encontrado(s):")
-            st.dataframe(resultado)
+            resultado = df[df[col_codigo].astype(str).isin(lista_codigos)]
 
-            # Botão para baixar resultado
-            csv = resultado.to_csv(index=False).encode("utf-8")
-            st.download_button("📥 Baixar resultados em CSV", csv, "resultado.csv", "text/csv")
+            if resultado.empty:
+                st.warning("Nenhum item encontrado.")
+            else:
+                st.success(f"{len(resultado)} item(ns) encontrado(s).")
+                st.dataframe(resultado)
