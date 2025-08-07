@@ -30,7 +30,6 @@ with aba[0]:
 with aba[1]:
     codigos = st.text_area("Cole os códigos (um por linha ou separados por vírgula)")
     if codigos:
-       lista_codigos = [c.strip() for c in codigos.replace(",", "\n").split()]
-").splitlines() if c.strip()]
+     lista_codigos = [c.strip() for c in codigos.replace(",", "\n").splitlines() if c.strip()]
         resultado = df[df["Código"].astype(str).isin(lista_codigos)]
         st.dataframe(resultado)
