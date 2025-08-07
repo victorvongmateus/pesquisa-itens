@@ -1,61 +1,45 @@
 import streamlit as st
 import pandas as pd
 
-# --- Configurações da página ---
-st.set_page_config(
-    page_title="Pesquisa de Itens - Bioenergética Aroeira",
-    layout="wide"
-)
+# Título
+st.title("🔎 Pesquisa de Itens - Bioenergética Aroeira")
 
-# --- Logo e título ---
-col1, col2 = st.columns([1, 10])
-with col1:
-    st.image("arvore.png", width=80)
-with col2:
-    st.markdown("<h1 style='color:#002060;'>🔍 Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
-
-st.markdown("Digite os códigos ou palavras separadas por vírgula ou enter:")
-
-# --- Campo de entrada do usuário ---
-codigos = st.text_area(" ", placeholder="Ex: corrente randon, rolete inferior", height=70)
-botao = st.button("Buscar")
-
-# --- Ação de busca ---
-if botao and codigos.strip():
+# Carrega os dados da aba 'Base'
+@st.cache_data
+def carregar_dados():
     try:
-        # Leitura da planilha na aba "Base"
         df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Base")
-        df.columns = df.columns.str.strip()  # remove espaços extras
-
-        # Verifica se a coluna "Código" existe
-        if not any(col.lower() == "código" for col in df.columns.str.lower()):
-            st.error(f"Coluna 'Código' não encontrada. Colunas disponíveis: {list(df.columns)}")
-            st.stop()
-
-        # Padroniza os nomes das colunas
-        df.columns = df.columns.str.strip().str.lower()
-        df.rename(columns={
-            "código": "codigo",
-            "descrição": "descricao",
-            "descrição reduzida": "descricao_reduzida"
-        }, inplace=True)
-
-        # Trata os termos digitados
-        lista_codigos = [c.strip().lower() for c in codigos.replace(",", "\n").splitlines() if c.strip()]
-
-        # Concatena colunas relevantes para a busca
-        df["codigo"] = df["codigo"].astype(str)
-        df["descricao"] = df["descricao"].astype(str)
-        df["descricao_reduzida"] = df.get("descricao_reduzida", "").astype(str)
-
-        df["busca"] = df["codigo"] + " " + df["descricao"] + " " + df["descricao_reduzida"]
-
-        # Filtra os resultados com base na lista de códigos/termos
-        resultado = df[df["busca"].apply(lambda texto: any(term in texto for term in lista_codigos))]
-
-        # Mostra resultado
-        st.success(f"{len(resultado)} item(ns) encontrado(s).")
-        st.dataframe(resultado.drop(columns=["busca"]).reset_index(drop=True), use_container_width=True)
-
+        df.columns = df.columns.str.strip()  # Remove espaços em branco das colunas
+        return df
     except Exception as e:
-        st.error(f"Ocorreu um erro: {e}")
+        st.error(f"Erro ao carregar a planilha: {e}")
+        return pd.DataFrame()
+
+df = carregar_dados()
+
+# Entrada do usuário
+entrada = st.text_area("Digite os códigos ou palavras separadas por vírgula ou enter:")
+
+# Botão de busca
+if st.button("Buscar"):
+    if df.empty:
+        st.warning("A planilha não foi carregada corretamente.")
+    elif entrada.strip() == "":
+        st.warning("Digite algo para pesquisar.")
+    else:
+        termos = [termo.strip().lower() for termo in entrada.replace("\n", ",").split(",") if termo.strip()]
+
+        # Cria uma coluna para busca combinada
+        df["busca"] = (
+            df.astype(str)
+            .apply(lambda row: " ".join(row.values).lower(), axis=1)
+        )
+
+        # Filtra resultados
+        resultado = df[df["busca"].apply(lambda texto: all(t in texto for t in termos))]
+
+        if resultado.empty:
+            st.error("Nenhum item encontrado.")
+        else:
+            st.success(f"{len(resultado)} item(ns) encontrado(s).")
+            st.dataframe(resultado.drop(columns=["busca"]))
