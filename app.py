@@ -1,49 +1,34 @@
 import streamlit as st
 import pandas as pd
 
-# Configurações da página
-st.set_page_config(page_title="Pesquisa de Itens - Bioenergética Aroeira", layout="wide")
+st.set_page_config(layout="wide")
 
-# Logo
-st.image("logo_aroeira.png", width=100)
+st.image("logo_aroeira.png", width=80)
+st.markdown("## 🔍 Pesquisa de Itens - Bioenergética Aroeira")
 
-# Título
-st.markdown("<h1 style='color: #0C1C4A;'>🔍 Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
+uploaded_file = "Pesquisa de itens.xlsm"
 
-# Entrada de texto
-entrada = st.text_area("Digite os códigos ou palavras separadas por vírgula ou enter:", height=60)
+try:
+    df = pd.read_excel(uploaded_file, sheet_name="Base")
+except Exception as e:
+    st.error(f"Erro ao carregar planilha: {e}")
+    st.stop()
 
-# Botão de busca
+termo = st.text_area("Digite os códigos ou palavras separadas por vírgula ou enter:")
+
 if st.button("Buscar"):
-    if not entrada.strip():
+    if not termo.strip():
         st.warning("Digite ao menos um código ou palavra.")
     else:
-        try:
-            # Leitura da planilha
-            df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Planilha1")
+        codigos = termo.replace(",", "\n").splitlines()
+        lista_codigos = [c.strip() for c in codigos if c.strip()]
 
-            # Verificação da existência das colunas
-            if "Código" not in df.columns or "Descrição" not in df.columns:
-                st.error("Coluna 'Código' ou 'Descrição' não encontrada na planilha.")
-            else:
-                # Lista de termos (podem ser códigos ou palavras)
-                lista_termos = [
-                    termo.strip().lower()
-                    for termo in entrada.replace(",", "\n").splitlines()
-                    if termo.strip()
-                ]
+        filtro = pd.Series([False] * len(df))
+        for c in lista_codigos:
+            filtro |= df.apply(lambda row: row.astype(str).str.contains(c, case=False, na=False).any(), axis=1)
 
-                # Filtro por códigos ou palavras na descrição
-                resultado = df[df["Código"].astype(str).isin(lista_termos) |
-                               df["Descrição"].str.lower().str.contains('|'.join(lista_termos), na=False)]
+        resultado = df[filtro]
 
-                if resultado.empty:
-                    st.warning("Nenhum item encontrado.")
-                else:
-                    st.success(f"{len(resultado)} item(ns) encontrado(s).")
-                    st.dataframe(resultado.reset_index(drop=True), use_container_width=True)
-
-        except FileNotFoundError:
-            st.error("Arquivo da planilha não encontrado.")
-        except Exception as e:
-            st.error(f"Ocorreu um erro: {str(e)}")
+        total = len(resultado)
+        st.success(f"{total} item(ns) encontrado(s).")
+        st.dataframe(resultado, use_container_width=True)
