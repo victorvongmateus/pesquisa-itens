@@ -1,45 +1,55 @@
 import streamlit as st
 import pandas as pd
 
-# Título e assinatura
-st.markdown(
-    "<p style='text-align: center; color: gray;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>",
-    unsafe_allow_html=True
-)
-st.markdown("<h1 style='text-align: center;'>🔎 Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
+# --- Configuração da página
+st.set_page_config(page_title="Pesquisa de Itens", layout="wide")
 
-# Campo de busca
-termo_busca = st.text_area("Digite os códigos ou palavras separadas por vírgula ou enter:")
+# --- Frase superior
+st.markdown("<p style='text-align: center; font-size:14px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>", unsafe_allow_html=True)
 
-# Botão de buscar
-if st.button("Buscar"):
+# --- Logo + Título
+col1, col2 = st.columns([1, 6])
+
+with col1:
+    st.image("logo_aroeira.png", width=100)
+
+with col2:
+    st.markdown("<h1 style='padding-top: 25px;'>Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
+
+# --- Instruções
+st.write("Digite os códigos ou palavras separadas por vírgula ou enter:")
+
+# --- Campo de busca
+entrada = st.text_area(" ", height=40)
+botao = st.button("Buscar")
+
+# --- Carrega a planilha
+try:
+    df = pd.read_excel("Pesquisa de itens.xlsx", sheet_name=None)
+except Exception as e:
+    st.error(f"Erro ao carregar planilha: {e}")
+    st.stop()
+
+# --- Concatena os dados das abas
+dados = pd.concat(df.values(), ignore_index=True)
+
+# --- Limpa os nomes das colunas
+dados.columns = [col.lower().strip() for col in dados.columns]
+
+# --- Busca
+if botao and entrada.strip():
+    termos = [termo.strip().lower() for termo in entrada.replace(",", "\n").splitlines() if termo.strip()]
+    
+    def contem_termo(row):
+        texto = ' '.join([str(v).lower() for v in row.values])
+        return any(t in texto for t in termos)
+
     try:
-        # Leitura da planilha
-        df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Base")
-
-        # Limpa e prepara os termos de busca
-        termos = [t.strip().lower() for t in termo_busca.replace('\n', ',').split(',') if t.strip() != ""]
-
-        # Garante que todos os campos relevantes estão em texto minúsculo para comparação
-        colunas_texto = df.select_dtypes(include=["object"]).columns
-        df_lower = df.copy()
-        for col in colunas_texto:
-            df_lower[col] = df_lower[col].astype(str).str.lower()
-
-        # Concatena todos os textos da linha em uma coluna auxiliar
-        df_lower["__concat"] = df_lower[colunas_texto].agg(" ".join, axis=1)
-
-        # Filtra por qualquer termo que esteja contido
-        mask = df_lower["__concat"].apply(lambda linha: any(termo in linha for termo in termos))
-        resultados = df[mask]
-
-        # Mostra quantos resultados e a tabela limpa, sem índice
-        st.success(f"{len(resultados)} item(ns) encontrado(s).")
-        st.dataframe(resultados.to_dict('records'), use_container_width=True)
-
-    except FileNotFoundError:
-        st.error("Arquivo 'Pesquisa de itens.xlsm' não encontrado no diretório.")
-    except ValueError as ve:
-        st.error(f"Ocorreu um erro: {ve}")
+        encontrados = dados[dados.apply(contem_termo, axis=1)]
+        if not encontrados.empty:
+            st.success(f"{len(encontrados)} item(ns) encontrado(s).")
+            st.dataframe(encontrados.reset_index(drop=True), use_container_width=True)
+        else:
+            st.warning("Nenhum item encontrado com os termos fornecidos.")
     except Exception as e:
-        st.error(f"Ocorreu um erro inesperado: {e}")
+        st.error(f"Ocorreu um erro: {e}")
