@@ -30,13 +30,22 @@ if st.button("Buscar"):
         # --- Limpeza e tratamento dos termos de busca ---
         lista_codigos = [c.strip().lower() for c in codigos.replace(",", "\n").splitlines() if c.strip()]
 
-        # --- Verifica se a coluna 'Código' existe ---
-        if "Código" not in df.columns and "Código".lower() not in df.columns.str.lower():
-            st.error("Coluna 'Código' não encontrada na planilha.")
-        else:
-            # --- Padroniza colunas para busca textual também nas descrições ---
-            df["Código"] = df["Código"].astype(str)
-            df["Descrição"] = df["Descrição"].astype(str)
-            df["Descrição reduzida"] = df.get("Descrição reduzida", "").astype(str)
+        # --- Padroniza colunas ---
+        df["Código"] = df["Código"].astype(str)
+        df["Descrição"] = df["Descrição"].astype(str)
+        df["Descrição reduzida"] = df.get("Descrição reduzida", "").astype(str)
 
-            # --- Concatena os campo
+        # --- Concatena os campos de busca ---
+        df["busca"] = df["Código"].str.lower() + " " + df["Descrição"].str.lower() + " " + df["Descrição reduzida"].str.lower()
+
+        # --- Filtro de resultados ---
+        resultado = df[df["busca"].apply(
+            lambda texto: any(term in texto for term in lista_codigos)
+        )]
+
+        # --- Mostra resultados ---
+        st.success(f"{len(resultado)} item(ns) encontrado(s).")
+        st.dataframe(resultado.drop(columns=["busca"]).reset_index(drop=True), use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Ocorreu um erro: {e}")
