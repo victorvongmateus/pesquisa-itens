@@ -3,13 +3,9 @@ import pandas as pd
 
 st.set_page_config(page_title="Pesquisa de Itens - Bioenergética Aroeira", layout="centered")
 
-# Logo
 st.image("logo_aroeira.png", width=100)
-
-# Título
 st.markdown("## 🔍 Pesquisa de Itens - Bioenergética Aroeira")
 
-# Upload da planilha
 uploaded_file = "Pesquisa de itens.xlsm"
 
 @st.cache_data
@@ -23,31 +19,38 @@ def carregar_dados():
 
 df = carregar_dados()
 
-# Entrada do usuário
-codigos = st.text_area("Digite os códigos separados por vírgula ou enter:", height=100)
+entrada = st.text_area("Digite os códigos ou palavras separadas por vírgula ou enter:", height=100)
 
-# Botão de busca
-if st.button("Buscar") and codigos:
-    # Processamento dos códigos
-    lista_codigos = [
-        c.strip()
-        for c in codigos.replace(",", "\n").splitlines()
-        if c.strip()
-    ]
+if st.button("Buscar") and entrada:
+    termos = [t.strip().lower() for t in entrada.replace(",", "\n").splitlines() if t.strip()]
 
     if df.empty:
-        st.warning("Nenhum dado foi carregado.")
+        st.warning("Nenhum dado carregado.")
     else:
-        # Tenta localizar a coluna com nome semelhante a "Código"
-        col_codigo = next((col for col in df.columns if "código" in col.lower()), None)
+        # Procurar colunas relevantes
+        colunas_validas = df.columns.str.lower()
+        col_codigo = next((c for c in df.columns if "código" in c.lower()), None)
+        col_descricao = next((c for c in df.columns if "descrição" in c.lower()), None)
 
-        if not col_codigo:
-            st.error("Coluna 'Código' não encontrada na planilha.")
+        if not col_codigo and not col_descricao:
+            st.error("Colunas de código ou descrição não encontradas.")
         else:
-            resultado = df[df[col_codigo].astype(str).isin(lista_codigos)]
+            df_str = df.astype(str).apply(lambda x: x.str.lower())
+
+            # Filtro por termos
+            resultado = df[
+                df_str.apply(
+                    lambda row: any(
+                        termo in row.get(col_codigo, "") or termo in row.get(col_descricao, "")
+                        for termo in termos
+                    ),
+                    axis=1,
+                )
+            ]
 
             if resultado.empty:
                 st.warning("Nenhum item encontrado.")
             else:
                 st.success(f"{len(resultado)} item(ns) encontrado(s).")
                 st.dataframe(resultado)
+
