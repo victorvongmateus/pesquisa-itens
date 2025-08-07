@@ -4,13 +4,13 @@ import pandas as pd
 # Configuração da página
 st.set_page_config(page_title="Pesquisa de Itens - Bioenergética Aroeira", layout="wide")
 
-# Logo e título
+# Cabeçalho com logo e título
 col1, col2 = st.columns([1, 10])
 with col1:
     st.image("logo_aroeira.png", width=120)
 with col2:
     st.markdown("<p style='text-align: center; font-size: 14px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>", unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align: center;'>🔍 Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
 
 # Entrada de busca
 st.write("Digite os códigos ou palavras separadas por vírgula ou enter:")
