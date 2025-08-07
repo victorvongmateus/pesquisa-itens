@@ -1,36 +1,31 @@
+from pathlib import Path
 import streamlit as st
 import pandas as pd
 
-# Título
-st.title("🔍 Pesquisa de Itens - Bioenergética Aroeira")
+# Caminho para o arquivo Excel
+ARQUIVO = "Pesquisa de itens.xlsm"
+ABA = "Base"
+
+st.set_page_config(page_title="Pesquisa de Itens", layout="wide")
+
+# Frase de autoria
+st.markdown(
+    "<p style='text-align:center; font-size:16px; color:gray;'>"
+    "Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola"
+    "</p>",
+    unsafe_allow_html=True
+)
+
+# Título da aplicação
+st.markdown("<h1 style='text-align:center;'>🔍 Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
 
 # Campo de entrada
-entrada = st.text_area("Digite os códigos ou palavras separadas por vírgula ou enter:")
+entrada = st.text_area("Digite os códigos ou palavras separadas por vírgula ou enter:", height=70)
 
 # Botão de busca
 if st.button("Buscar"):
     try:
-        # Carrega a planilha e define aba correta
-        df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Base")
+        # Carrega a planilha
+        df = pd.read_excel(ARQUIVO, sheet_name=ABA)
 
-        # Padroniza nomes das colunas (tudo minúsculo e sem espaços)
-        df.columns = [col.strip().lower() for col in df.columns]
-
-        # Cria uma coluna auxiliar com todas as informações unidas
-        df["busca"] = df.astype(str).apply(lambda row: " ".join(row.values).lower(), axis=1)
-
-        # Prepara termos de busca
-        termos = [t.strip().lower() for t in entrada.replace("\n", ",").split(",") if t.strip()]
-
-        # Aplica filtro
-        resultado = df[df["busca"].apply(lambda texto: any(t in texto for t in termos))]
-
-        # Remove a coluna auxiliar
-        resultado = resultado.drop(columns=["busca"])
-
-        # Exibe os resultados sem a coluna de índice
-        st.success(f"{len(resultado)} item(ns) encontrado(s).")
-        st.dataframe(resultado, use_container_width=True, hide_index=True)
-
-    except Exception as e:
-        st.error(f"Ocorreu um erro: {e}")
+        # Garante que
