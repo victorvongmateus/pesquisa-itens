@@ -4,8 +4,8 @@ from PIL import Image
 
 st.set_page_config(page_title="Pesquisa de Itens", layout="wide")
 
-# Topo com logo à esquerda e título à direita
-col1, col2 = st.columns([1, 4])  # Ajuste proporcional das colunas
+# Layout superior: logo à esquerda, título e nome à direita
+col1, col2 = st.columns([1, 4])
 
 with col1:
     try:
@@ -19,13 +19,15 @@ with col2:
         """
         <div style="display: flex; flex-direction: column; justify-content: center;">
             <h1 style="margin-bottom: 0;">Pesquisa de Itens – Bioenergética Aroeira</h1>
-            <p style="font-weight: bold; font-size: 16px; margin-top: 5px;">Desenvolvido por Victor von Glehn Mateus</p>
+            <p style="font-weight: bold; font-size: 16px; margin-top: 5px;">
+                Desenvolvido por Victor von Glehn Mateus
+            </p>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-# Carrega a base
+# Leitura da base de dados
 df_base = pd.read_excel("Pesquisa de itens.xlsm", engine="openpyxl")
 df_base.columns = df_base.columns.str.strip().str.upper()
 
@@ -35,6 +37,7 @@ termo_busca = st.text_input("Digite o termo ou código que deseja buscar:")
 if termo_busca:
     termos = termo_busca.strip().upper().split()
 
+    # Aplica filtro
     filtro = df_base.apply(
         lambda row: any(
             termo in str(row.get("CODIGO", "")).upper() or termo in str(row.get("DESCRICAO", "")).upper()
@@ -47,6 +50,6 @@ if termo_busca:
 
     if not resultados.empty:
         st.success(f"{len(resultados)} item(ns) encontrado(s).")
-        st.dataframe(resultados)
+        st.dataframe(resultados.reset_index(drop=True), use_container_width=True)
     else:
         st.warning("Nenhum resultado encontrado.")
