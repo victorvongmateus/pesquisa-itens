@@ -23,20 +23,12 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Novo título centralizado
+# Título atualizado
 st.markdown("<h1 style='text-align: center;'>Pesquisa de Itens – Bioenergética Aroeira</h1>", unsafe_allow_html=True)
 
-# Leitura da base
+# Carrega a base
 df_base = pd.read_excel("Pesquisa de itens.xlsm", engine="openpyxl")
 df_base.columns = df_base.columns.str.strip().str.upper()
 
 # Campo de busca
-termo_busca = st.text_input("Digite o termo ou código que deseja buscar:")
-
-if termo_busca:
-    termos = termo_busca.strip().upper().split()
-
-    filtro = df_base.apply(
-        lambda row: any(
-            termo in str(row.get("CODIGO", "")).upper() or termo in str(row.get("DESCRICAO", "")).upper()
-            for term
+termo_busca = st.text_input("Digite o ter
