@@ -2,63 +2,75 @@ import streamlit as st
 import pandas as pd
 import base64
 
-# --- Função para carregar e converter imagem para base64 ---
+# Função para converter imagem em base64
 def get_base64_logo():
     with open("logo.png", "rb") as f:
-        return base64.b64encode(f.read()).decode()
+        data = f.read()
+    return base64.b64encode(data).decode()
 
-# --- Carregamento da imagem ---
+# Função para carregar base
+@st.cache_data
+def carregar_dados():
+    try:
+        df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name=None)
+        for nome_aba, dados in df.items():
+            if "CÓDIGO" in dados.columns.str.upper():
+                return dados
+        st.error("Coluna 'CÓDIGO' não encontrada em nenhuma aba.")
+    except Exception as e:
+        st.error(f"Erro ao carregar planilha: {e}")
+        return pd.DataFrame()
+
+# Conversão para base64 da imagem
 logo_base64 = get_base64_logo()
 
-# --- Centralizar logo e títulos ---
+# --- Layout Superior ---
 st.markdown(
     f"""
-    <div style="text-align: center;">
-        <img src="data:image/png;base64,{logo_base64}" width="120">
-        <p style="font-size:13px; margin-top: 10px;">Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>
-        <h2 style="margin-top: 5px; font-size: 26px;">Pesquisa de Itens - Bioenergética Aroeira</h2>
+    <div style='text-align: center; margin-top: -40px; margin-bottom: -30px;'>
+        <img src='data:image/png;base64,{logo_base64}' width='150'><br>
+        <p style='font-size:12px; color:#333; margin-top:-5px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>
+        <h2 style='font-size:28px;'>Pesquisa de Itens - Bioenergética Aroeira</h2>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# --- Campo de entrada ---
+# --- Entrada de pesquisa ---
 st.write("Digite os códigos ou palavras separadas por vírgula ou enter:")
-input_text = st.text_area("", height=80)
-buscar = st.button("Buscar")
+entrada = st.text_area("", height=80)
+df_base = carregar_dados()
 
-# --- Realizar a busca ---
-if buscar:
-    if not input_text.strip():
-        st.warning("Por favor, insira ao menos um código ou palavra.")
+# --- Botão ---
+if st.button("Buscar"):
+    if not entrada.strip():
+        st.warning("Digite pelo menos um termo.")
     else:
-        try:
-            df_base = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Base")
-            df_base.columns = [col.upper() for col in df_base.columns]
+        termos = [termo.strip().upper() for termo in entrada.replace("\n", ",").split(",") if termo.strip()]
+        col_busca = df_base.columns.str.upper()
 
-            termos = [t.strip().upper() for t in input_text.replace("\n", ",").split(",") if t.strip()]
-            resultados = pd.DataFrame()
+        # Padronização
+        for col in col_busca:
+            df_base[col] = df_base[col].astype(str).str.upper()
 
-            for termo in termos:
-                filtro = df_base["CÓDIGO"].astype(str).str.contains(termo) | df_base["DESCRIÇÃO"].str.upper().str.contains(termo)
-                encontrados = df_base[filtro]
-                resultados = pd.concat([resultados, encontrados])
+        # Filtragem
+        resultados = df_base[df_base.apply(
+            lambda row: any(termo in str(row[col]) for termo in termos for col in col_busca),
+            axis=1
+        )]
 
-            resultados.drop_duplicates(inplace=True)
+        if not resultados.empty:
+            st.success(f"{len(resultados)} item(ns) encontrado(s).")
 
-            if not resultados.empty:
-                st.success(f"{len(resultados)} ITEM(NS) ENCONTRADO(S).")
-                # Remover a primeira coluna se ela for apenas índice antigo
-                resultados.reset_index(drop=True, inplace=True)
-                # Formatar coluna de preço
-                if "R$ MÉDIO" in resultados.columns:
-                    resultados["R$ MÉDIO"] = resultados["R$ MÉDIO"].apply(lambda x: f"R$ {x:,.2f}".replace(".", ",") if pd.notnull(x) else "-")
-                # Substituir valores 0 por "-"
-                for col in ["MÍN", "MÁX"]:
-                    if col in resultados.columns:
-                        resultados[col] = resultados[col].replace(0, "-")
-                st.dataframe(resultados)
-            else:
-                st.warning("Nenhum item encontrado.")
-        except Exception as e:
-            st.error(f"Erro ao carregar planilha: {e}")
+            # Conversão e formatação
+            resultados["R$ MÉDIO"] = resultados["R$ MÉDIO"].apply(
+                lambda x: f"R$ {x:.2f}" if pd.notna(x) and x != "-" else "-"
+            )
+
+            # Exibir com letras maiúsculas e colunas desejadas
+            colunas_desejadas = ["CÓDIGO", "DESCRIÇÃO", "DESCRIÇÃO ANTIGA", "SITUAÇÃO", "UNIDADE", "MÍN", "MÁX", "R$ MÉDIO"]
+            colunas_disponíveis = [col for col in colunas_desejadas if col in resultados.columns.str.upper()]
+            resultados.columns = resultados.columns.str.upper()
+            st.dataframe(resultados[colunas_disponíveis])
+        else:
+            st.warning("Nenhum item encontrado.")
