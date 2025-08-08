@@ -1,70 +1,64 @@
 import streamlit as st
 import pandas as pd
-from PIL import Image
+import base64
 
-# --- CONFIGURAÇÃO INICIAL ---
-st.set_page_config(layout="wide")
+# --- Função para carregar e converter imagem para base64 ---
+def get_base64_logo():
+    with open("logo.png", "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
-# --- FUNÇÃO PARA FORMATAR CAMPOS NUMÉRICOS ---
-def formatar_colunas(df):
-    df.columns = [col.upper() for col in df.columns]
-    if 'R$ MÉDIO' in df.columns:
-        df['R$ MÉDIO'] = df['R$ MÉDIO'].apply(lambda x: f"R$ {x:,.2f}".replace(".", ","))
-    return df
+# --- Carregamento da imagem ---
+logo_base64 = get_base64_logo()
 
-# --- LOGO CENTRALIZADO ---
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.image("logo_aroeira.png", width=120)
-
-# --- TEXTO DESENVOLVIDO POR (com fonte menor) ---
+# --- Centralizar logo e títulos ---
 st.markdown(
-    "<p style='text-align:center; font-size:13px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>",
+    f"""
+    <div style="text-align: center;">
+        <img src="data:image/png;base64,{logo_base64}" width="120">
+        <p style="font-size:13px; margin-top: 10px;">Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>
+        <h2 style="margin-top: 5px; font-size: 26px;">Pesquisa de Itens - Bioenergética Aroeira</h2>
+    </div>
+    """,
     unsafe_allow_html=True
 )
 
-# --- TÍTULO (com fonte menor e sem ícone) ---
-st.markdown(
-    "<h3 style='text-align:center;'>Pesquisa de Itens - Bioenergética Aroeira</h3>",
-    unsafe_allow_html=True
-)
+# --- Campo de entrada ---
+st.write("Digite os códigos ou palavras separadas por vírgula ou enter:")
+input_text = st.text_area("", height=80)
+buscar = st.button("Buscar")
 
-# --- CAMPO DE ENTRADA ---
-st.markdown("Digite os códigos ou palavras separadas por vírgula ou enter:")
-entrada = st.text_area("", height=60)
-btn = st.button("Buscar")
-
-# --- LEITURA DA PLANILHA ---
-try:
-    df_base = pd.read_excel("Pesquisa de itens.xlsm", sheet_name=0, dtype=str)
-    df_base = df_base.apply(lambda col: col.str.upper() if col.dtype == "object" else col)
-except Exception as e:
-    st.error(f"Erro ao carregar planilha: {e}")
-    st.stop()
-
-# --- BUSCA ---
-if btn:
-    termos = [t.strip().upper() for t in entrada.replace("\n", ",").split(",") if t.strip()]
-    
-    if not termos:
-        st.warning("Digite ao menos um termo válido para pesquisa.")
+# --- Realizar a busca ---
+if buscar:
+    if not input_text.strip():
+        st.warning("Por favor, insira ao menos um código ou palavra.")
     else:
-        col_busca = ['CÓDIGO', 'DESCRIÇÃO']
-        resultados = df_base[df_base[col_busca[0]].astype(str).isin(termos)]
-        
-        for termo in termos:
-            filtro_parcial = df_base[col_busca[1]].str.contains(termo, na=False)
-            resultados = pd.concat([resultados, df_base[filtro_parcial]])
+        try:
+            df_base = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Base")
+            df_base.columns = [col.upper() for col in df_base.columns]
 
-        if resultados.empty:
-            st.warning("Nenhum item encontrado.")
-        else:
-            resultados = resultados.drop_duplicates()
-            resultados = formatar_colunas(resultados)
+            termos = [t.strip().upper() for t in input_text.replace("\n", ",").split(",") if t.strip()]
+            resultados = pd.DataFrame()
 
-            st.success(f"{len(resultados)} ITEM(NS) ENCONTRADO(S).")
+            for termo in termos:
+                filtro = df_base["CÓDIGO"].astype(str).str.contains(termo) | df_base["DESCRIÇÃO"].str.upper().str.contains(termo)
+                encontrados = df_base[filtro]
+                resultados = pd.concat([resultados, encontrados])
 
-            st.dataframe(
-                resultados.reset_index(drop=True),
-                use_container_width=True
-            )
+            resultados.drop_duplicates(inplace=True)
+
+            if not resultados.empty:
+                st.success(f"{len(resultados)} ITEM(NS) ENCONTRADO(S).")
+                # Remover a primeira coluna se ela for apenas índice antigo
+                resultados.reset_index(drop=True, inplace=True)
+                # Formatar coluna de preço
+                if "R$ MÉDIO" in resultados.columns:
+                    resultados["R$ MÉDIO"] = resultados["R$ MÉDIO"].apply(lambda x: f"R$ {x:,.2f}".replace(".", ",") if pd.notnull(x) else "-")
+                # Substituir valores 0 por "-"
+                for col in ["MÍN", "MÁX"]:
+                    if col in resultados.columns:
+                        resultados[col] = resultados[col].replace(0, "-")
+                st.dataframe(resultados)
+            else:
+                st.warning("Nenhum item encontrado.")
+        except Exception as e:
+            st.error(f"Erro ao carregar planilha: {e}")
