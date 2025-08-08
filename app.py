@@ -1,46 +1,55 @@
 import streamlit as st
 import pandas as pd
 
-# Título e logo
-st.set_page_config(page_title="Pesquisa de Itens - Bioenergética Aroeira", layout="wide")
-col1, col2 = st.columns([1, 9])
-with col1:
-    st.image("logo_aroeira.png", width=100)
-with col2:
-    st.markdown("<h1 style='margin-bottom: 0;'>🔍 Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
-    st.caption("Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola")
+# Título e descrição
+st.markdown("<div style='text-align: center; font-size: 14px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</div>", unsafe_allow_html=True)
+st.image("logo_aroeira.png", width=120)
 
-# Caixa de texto para entrada
-st.markdown("Digite os códigos ou palavras separadas por vírgula ou enter:")
-entrada = st.text_area("", height=50)
+st.markdown("<h1 style='text-align: center;'>Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
 
-# Botão de busca
-if st.button("Buscar"):
-    try:
-        # Leitura e padronização da planilha
-        df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Base")
-        df.columns = df.columns.str.lower().str.strip()
-        df = df.astype(str).apply(lambda col: col.str.lower())
+# Campo de entrada
+st.write("Digite os códigos ou palavras separadas por vírgula ou enter:")
+entrada = st.text_area("", height=60)
+botao = st.button("Buscar")
 
-        # Separar termos digitados
-        termos = [t.strip().lower() for t in entrada.replace("\n", ",").split(",") if t.strip()]
+# Tentativa de leitura da planilha
+try:
+    df = pd.read_excel("Pesquisa de itens.xlsm")
+
+    # Remove a primeira coluna se ela for de índice automático (0, 1, 2...)
+    if df.columns[0].lower() in ["", "unnamed: 0", "índice", "index"] or df.columns[0] == df.index.name:
+        df = df.iloc[:, 1:]
+
+    # Padronizar colunas para MAIÚSCULAS
+    df.columns = df.columns.str.upper()
+
+    # Formatar a coluna de R$ MÉDIO (caso exista)
+    if "R$ MÉDIO" in df.columns:
+        df["R$ MÉDIO"] = df["R$ MÉDIO"].apply(lambda x: f"R$ {x:.2f}" if pd.notna(x) else "-")
+
+    # Quando o botão é pressionado
+    if botao:
+        termos = [termo.strip().lower() for termo in entrada.replace("\n", ",").split(",") if termo.strip() != ""]
 
         if not termos:
             st.warning("Digite pelo menos um termo para buscar.")
         else:
-            # Filtro: verifica se algum termo aparece nas colunas 'codigo' ou 'descricao'
             resultado = df[
-                df['codigo'].str.contains('|'.join(termos), na=False) |
-                df['descricao'].str.contains('|'.join(termos), na=False)
+                df.apply(lambda row: any(
+                    termo in str(row[campo]).lower()
+                    for termo in termos
+                    for campo in ["CÓDIGO", "DESCRICAO", "DESCRIÇÃO", "DESCRIÇÃO REDUZIDA", "DESCRIÇÃO ANTIGA"]
+                    if campo in df.columns
+                ), axis=1)
             ]
 
-            if resultado.empty:
-                st.warning("Nenhum item encontrado.")
-            else:
+            if not resultado.empty:
                 st.success(f"{len(resultado)} item(ns) encontrado(s).")
-                st.dataframe(resultado.dropna(axis=1, how='all'), use_container_width=True)
+                st.dataframe(resultado, use_container_width=True)
+            else:
+                st.warning("Nenhum item encontrado.")
 
-    except FileNotFoundError:
-        st.error("Erro ao carregar planilha: Arquivo 'Pesquisa de itens.xlsm' não encontrado.")
-    except Exception as e:
-        st.error(f"Erro ao carregar planilha: {e}")
+except FileNotFoundError:
+    st.error("Erro ao carregar planilha: Arquivo 'Pesquisa de itens.xlsm' não encontrado.")
+except Exception as e:
+    st.error(f"Erro ao processar a planilha: {e}")
