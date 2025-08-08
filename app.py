@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from PIL import Image
 
-# --- CONFIGURAÇÕES INICIAIS ---
+# --- CONFIGURAÇÃO INICIAL ---
 st.set_page_config(layout="wide")
 
 # --- FUNÇÃO PARA FORMATAR CAMPOS NUMÉRICOS ---
@@ -12,20 +12,20 @@ def formatar_colunas(df):
         df['R$ MÉDIO'] = df['R$ MÉDIO'].apply(lambda x: f"R$ {x:,.2f}".replace(".", ","))
     return df
 
-# --- LOGO E TÍTULOS ---
-logo = Image.open("logo_aroeira.png")
-st.markdown(
-    f"<div style='text-align:center'><img src='data:image/png;base64,{st.image_to_base64(logo)}' width='120'></div>",
-    unsafe_allow_html=True,
-)
+# --- LOGO CENTRALIZADO ---
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.image("logo_aroeira.png", width=120)
 
+# --- TEXTO DESENVOLVIDO POR (com fonte menor) ---
 st.markdown(
     "<p style='text-align:center; font-size:13px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>",
     unsafe_allow_html=True
 )
 
+# --- TÍTULO (com fonte menor e sem ícone) ---
 st.markdown(
-    "<h2 style='text-align:center;'>Pesquisa de Itens - Bioenergética Aroeira</h2>",
+    "<h3 style='text-align:center;'>Pesquisa de Itens - Bioenergética Aroeira</h3>",
     unsafe_allow_html=True
 )
 
