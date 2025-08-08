@@ -4,22 +4,16 @@ from PIL import Image
 
 st.set_page_config(page_title="Pesquisa de Itens", layout="centered")
 
-# Logo centralizada
+# Logo centralizada corretamente
 try:
     logo = Image.open("logo_aroeira.png")
-    st.markdown(
-        """
-        <div style='text-align: center;'>
-            <img src='data:image/png;base64,%s' width='200'/>
-        </div>
-        """ % st.image(logo, output_format="PNG").image_to_bytes().decode("utf-8"),
-        unsafe_allow_html=True
-    )
-except:
-    # Fallback em caso de erro
+    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     st.image(logo, width=200)
+    st.markdown("</div>", unsafe_allow_html=True)
+except:
+    pass
 
-# Desenvolvido por (abaixo da logo)
+# Desenvolvido por (logo abaixo da logo)
 st.markdown(
     """
     <div style="text-align: center; font-size: 16px; margin-top: -10px; margin-bottom: 30px;">
@@ -29,7 +23,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Título (sem emoji/lupa)
+# Título (sem a lupa)
 st.markdown("<h1 style='text-align: center;'>Pesquisa de Itens</h1>", unsafe_allow_html=True)
 
 # Carrega base
