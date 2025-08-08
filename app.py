@@ -5,17 +5,19 @@ from PIL import Image
 # Configurações da página
 st.set_page_config(page_title="Pesquisa de Itens", layout="wide")
 
-# Carrega logo
+# Carrega o logo
 logo = Image.open("logo_aroeira.png")
 
-# Layout superior com logo à esquerda e título + autor centralizados
+# Layout superior: logo à esquerda, título e autor à direita
 col1, col2 = st.columns([1, 6])
 with col1:
     st.image(logo, width=120)
 with col2:
     st.markdown(
-        "<h1 style='text-align: left; margin-bottom: 0;'>Pesquisa de Itens – Bioenergética Aroeira</h1>"
-        "<p style='text-align: left; font-weight: bold;'>Desenvolvido por Victor von Glehn Mateus</p>",
+        """
+        <h1 style='text-align: left; margin-bottom: 0;'>Pesquisa de Itens – Bioenergética Aroeira</h1>
+        <p style='text-align: left; font-weight: bold;'>Desenvolvido por Victor von Glehn Mateus</p>
+        """,
         unsafe_allow_html=True
     )
 
@@ -31,7 +33,21 @@ def carregar_dados():
 
 df_base = carregar_dados()
 
-# Filtragem
+# Filtragem com busca específica
 if termo_busca:
     termo_busca = termo_busca.strip().upper()
-    filtro = df_base.ap_
+    filtro = df_base.apply(
+        lambda row: termo_busca in str(row.get("DESCRICAO", "")).upper()
+                 or termo_busca in str(row.get("DESCRIÇÃO ANTIGA", "")).upper()
+                 or termo_busca in str(row.get("CODIGO", "")).upper(),
+        axis=1
+    )
+    df_filtrado = df_base[filtro]
+
+    qtde = df_filtrado.shape[0]
+    st.success(f"{qtde} item(ns) encontrado(s)." if qtde > 0 else "Nenhum resultado encontrado.")
+
+    if qtde > 0:
+        colunas_exibir = ["CODIGO", "DESCRICAO", "DESCRIÇÃO ANTIGA", "SITUACAO"]
+        colunas_existentes = [col for col in colunas_exibir if col in df_filtrado.columns]
+        st.dataframe(df_filtrado[colunas_existentes].reset_index(drop=True), use_container_width=True)
