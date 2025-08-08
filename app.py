@@ -16,7 +16,7 @@ st.markdown(
 # Título centralizado
 st.markdown("<h1 style='text-align: center;'>🔍 Pesquisa de Itens</h1>", unsafe_allow_html=True)
 
-# Lê a planilha salva no repositório
+# Lê a planilha fixa no repositório
 df_base = pd.read_excel("Pesquisa de itens.xlsm", engine="openpyxl")
 df_base.columns = df_base.columns.str.strip().str.upper()
 
@@ -41,3 +41,13 @@ if termo_busca:
         st.dataframe(resultados)
     else:
         st.warning("Nenhum resultado encontrado.")
+
+# Rodapé "Desenvolvido por"
+st.markdown(
+    """
+    <div style="text-align: center; font-size: 12px; margin-top: 50px;">
+        Desenvolvido por Victor von Glehn Mateus
+    </div>
+    """,
+    unsafe_allow_html=True
+)
