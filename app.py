@@ -43,6 +43,9 @@ termo = st.text_area("Digite os códigos ou palavras separadas por vírgula ou e
 if st.button("Buscar"):
     df = carregar_planilha()
     if df is not None:
+        # Remover colunas sem nome (ex: índice da planilha)
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
         # Padronizar colunas
         df.columns = [col.upper() for col in df.columns]
 
@@ -54,10 +57,6 @@ if st.button("Buscar"):
         # Formatar valores do campo R$ MÉDIO
         if "R$ MÉDIO" in df.columns:
             df["R$ MÉDIO"] = df["R$ MÉDIO"].apply(lambda x: f"R$ {x:,.2f}" if pd.notnull(x) else "-")
-
-        # Remover primeira coluna visível (independente do nome)
-        if df.shape[1] > 1:
-            df = df.iloc[:, 1:]
 
         # Buscar por termos
         termos = [t.strip().upper() for t in termo.replace("\n", ",").split(",") if t.strip()]
