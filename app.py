@@ -1,67 +1,47 @@
 import streamlit as st
 import pandas as pd
-import base64
 
-# Função para converter imagem em base64
-def get_base64_logo():
-    with open("logo_aroeira.png", "rb") as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+# Título e campo de busca
+st.set_page_config(page_title="Pesquisa de Itens", layout="centered")
+st.title("Pesquisa de Itens")
 
-# Carregar a planilha e renomear as colunas para maiúsculas
-@st.cache_data
-def carregar_dados():
-    df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name=0)
-    df.columns = [col.upper() for col in df.columns]
-    for col in ["MÍN", "MÁX", "R$ MÉDIO"]:
-        if col in df.columns:
-            df[col] = df[col].apply(lambda x: "-" if pd.isna(x) or x == 0 else f"R$ {x:.2f}" if col == "R$ MÉDIO" else int(x))
-    return df
+# Upload do arquivo
+arquivo = st.file_uploader("Escolha o arquivo Excel (.xlsx)", type="xlsx")
 
-# Exibir logo
-logo_base64 = get_base64_logo()
-st.markdown(
-    f"<div style='text-align: center'><img src='data:image/png;base64,{logo_base64}' width='140'></div>",
-    unsafe_allow_html=True,
-)
+if arquivo is not None:
+    # Leitura da base
+    df_base = pd.read_excel(arquivo)
 
-# Título e subtítulo centralizados
-st.markdown(
-    "<h5 style='text-align: center; color: black;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</h5>",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    "<h2 style='text-align: center; color: black;'>Pesquisa de Itens - Bioenergética Aroeira</h2>",
-    unsafe_allow_html=True,
-)
+    # Normaliza os nomes das colunas (remove espaços e coloca tudo em maiúsculo)
+    df_base.columns = df_base.columns.str.strip().str.upper()
 
-# Campo de busca
-st.write("Digite os códigos ou palavras separadas por vírgula ou enter:")
-entrada = st.text_area("", height=60)
+    # Mostra as colunas disponíveis para debug
+    st.write("Colunas carregadas:", df_base.columns.tolist())
 
-# Botão
-if st.button("Buscar"):
-    if entrada.strip() == "":
-        st.warning("Digite ao menos um termo para buscar.")
-    else:
-        termos = [t.strip().upper() for t in entrada.replace(",", "\n").splitlines() if t.strip() != ""]
+    # Campo de busca
+    termo_busca = st.text_input("Digite o termo ou código que deseja buscar:")
 
-        df_base = carregar_dados()
+    if termo_busca:
+        termos = termo_busca.strip().upper().split()
 
-        # Converter as colunas relevantes para string
-        col_busca = ["CÓDIGO", "DESCRIÇÃO"]
-        for col in col_busca:
-            if col in df_base.columns:
-                df_base[col] = df_base[col].astype(str).str.upper()
+        try:
+            # Filtro robusto com verificação de colunas
+            if "CÓDIGO" in df_base.columns and "DESCRIÇÃO" in df_base.columns:
+                filtro = df_base.apply(
+                    lambda row: any(termo in str(row["CÓDIGO"]).upper() or termo in str(row["DESCRIÇÃO"]).upper() for termo in termos),
+                    axis=1
+                )
 
-        # Buscar itens que contenham algum dos termos
-        filtro = df_base.apply(
-            lambda row: any(termo in row["CÓDIGO"] or termo in row["DESCRIÇÃO"] for termo in termos),
-            axis=1,
-        )
+                resultados = df_base[filtro]
 
-        resultados = df_base[filtro]
-
-        if not resultados.empty:
-            st.success(f"{len(resultados)} ITEM(NS) ENCONTRADO(S).")
-            st.dataframe(resultados, use_container_width=True)
+                if not resultados.empty:
+                    st.success(f"{len(resultados)} itens encontrados.")
+                    st.dataframe(resultados)
+                else:
+                    st.warning("Nenhum resultado encontrado.")
+            else:
+                st.error("As colunas 'CÓDIGO' e 'DESCRIÇÃO' não foram encontradas no arquivo.")
+        except Exception as e:
+            st.error(f"Ocorreu um erro durante a busca: {e}")
+else:
+    st.info("Envie um arquivo Excel para iniciar.")
