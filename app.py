@@ -1,60 +1,70 @@
 import streamlit as st
 import pandas as pd
+import base64
 
-# Configurações da página
+# Função para carregar a planilha
+@st.cache_data
+def carregar_planilha():
+    try:
+        xls = pd.ExcelFile('Pesquisa de itens.xlsm')
+        df = pd.read_excel(xls, sheet_name=xls.sheet_names[0])
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar planilha: {e}")
+        return None
+
+# Função para converter imagem em base64
+def get_image_base64(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+# Página
 st.set_page_config(page_title="Pesquisa de Itens - Bioenergética Aroeira", layout="wide")
 
-# Texto acima
-st.markdown("<div style='text-align: center; font-size: 14px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</div>", unsafe_allow_html=True)
+# Logo
+logo_base64 = get_image_base64("logo_aroeira.png")
+st.markdown(
+    f"""
+    <div style="display: flex; align-items: center; justify-content: center;">
+        <img src="data:image/png;base64,{logo_base64}" alt="Logo" style="height: 100px; margin-right: 30px;">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-# Logo da Aroeira
-st.image("logo_aroeira.png", width=120)
+# Título e subtítulo
+st.markdown("<p style='text-align: center; font-size: 14px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>🔍 PESQUISA DE ITENS - BIOENERGÉTICA AROEIRA</h1>", unsafe_allow_html=True)
 
-# Título
-st.markdown("<h1 style='text-align: center;'>🔍 Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
+# Entrada
+termo = st.text_area("Digite os códigos ou palavras separadas por vírgula ou enter:")
 
-# Campo de entrada
-st.write("Digite os códigos ou palavras separadas por vírgula ou enter:")
-entrada = st.text_area("", height=60)
-
-# Botão de busca
+# Botão
 if st.button("Buscar"):
-    try:
-        # Leitura da planilha
-        df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Planilha1", dtype=str)
+    df = carregar_planilha()
+    if df is not None:
+        # Padronizar colunas
+        df.columns = [col.upper() for col in df.columns]
 
-        # Força todas as colunas para string
-        df = df.astype(str)
+        # Transformar coluna 'DESCRIÇÃO REDUZIDA' e outras em str maiúsculas
+        for col in df.columns:
+            if df[col].dtype == object:
+                df[col] = df[col].astype(str).str.upper()
 
-        # Transforma todas as colunas em maiúsculas
-        df.columns = df.columns.str.upper()
-
-        # Aplica maiúsculas no conteúdo
-        df = df.applymap(lambda x: x.upper())
-
-        # Converte valor médio para float e formata com R$
+        # Corrigir nome das colunas e formatação R$
         if "R$ MÉDIO" in df.columns:
-            df["R$ MÉDIO"] = df["R$ MÉDIO"].replace("-", "0").str.replace(",", ".", regex=False).astype(float)
-            df["R$ MÉDIO"] = df["R$ MÉDIO"].apply(lambda x: f"R$ {x:.2f}" if x > 0 else "-")
+            df["R$ MÉDIO"] = df["R$ MÉDIO"].apply(lambda x: f"R$ {x:,.2f}" if pd.notnull(x) else "-")
 
-        # Divide termos por vírgula, quebra de linha ou espaço
-        termos = [t.strip().upper() for t in entrada.replace("\n", ",").replace(" ", ",").split(",") if t.strip()]
+        # Remover primeira coluna (oculta, índice antigo)
+        if df.columns[0] not in ['CÓDIGO', 'CODIGO']:
+            df = df.iloc[:, 1:]
 
-        # Função para verificar se qualquer termo está presente
-        def contem_termo(linha):
-            return any(termo in linha for termo in termos)
-
-        # Aplica filtro nas colunas principais
-        colunas_busca = ["CÓDIGO", "DESCRIÇÃO"]
-        resultado = df[df[colunas_busca].apply(lambda row: contem_termo(" ".join(row)), axis=1)]
+        # Filtrar por termos
+        termos = [t.strip().upper() for t in termo.replace("\n", ",").split(",") if t.strip()]
+        resultado = df[df.apply(lambda row: any(t in str(row.values).upper() for t in termos), axis=1)]
 
         if not resultado.empty:
             st.success(f"{len(resultado)} ITEM(NS) ENCONTRADO(S).")
-
-            # Oculta o índice e exibe resultado
-            st.dataframe(resultado.reset_index(drop=True), use_container_width=True)
+            st.dataframe(resultado)
         else:
             st.warning("Nenhum item encontrado.")
-
-    except Exception as e:
-        st.error(f"Erro ao carregar planilha: {e}")
