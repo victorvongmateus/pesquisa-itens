@@ -9,6 +9,9 @@ arquivo = st.file_uploader("Escolha o arquivo Excel (.xlsx ou .xlsm)", type=["xl
 
 if arquivo is not None:
     try:
+        # Debug: confirma o nome do arquivo carregado
+        st.write("📁 Arquivo carregado:", arquivo.name)
+
         # Força o uso do engine openpyxl, que suporta .xlsm
         df_base = pd.read_excel(arquivo, engine="openpyxl")
 
@@ -18,6 +21,7 @@ if arquivo is not None:
         # Mostra colunas para debug
         st.write("✅ Colunas carregadas:", df_base.columns.tolist())
 
+        # Verifica se as colunas obrigatórias existem
         if "CÓDIGO" in df_base.columns and "DESCRIÇÃO" in df_base.columns:
             termo_busca = st.text_input("Digite o termo ou código que deseja buscar:")
 
