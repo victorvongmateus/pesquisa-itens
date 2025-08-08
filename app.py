@@ -46,20 +46,20 @@ if st.button("Buscar"):
         # Padronizar colunas
         df.columns = [col.upper() for col in df.columns]
 
-        # Transformar coluna 'DESCRIÇÃO REDUZIDA' e outras em str maiúsculas
+        # Transformar colunas de texto em maiúsculo
         for col in df.columns:
             if df[col].dtype == object:
                 df[col] = df[col].astype(str).str.upper()
 
-        # Corrigir nome das colunas e formatação R$
+        # Formatar valores do campo R$ MÉDIO
         if "R$ MÉDIO" in df.columns:
             df["R$ MÉDIO"] = df["R$ MÉDIO"].apply(lambda x: f"R$ {x:,.2f}" if pd.notnull(x) else "-")
 
-        # Remover primeira coluna (oculta, índice antigo)
-        if df.columns[0] not in ['CÓDIGO', 'CODIGO']:
+        # Remover primeira coluna visível (independente do nome)
+        if df.shape[1] > 1:
             df = df.iloc[:, 1:]
 
-        # Filtrar por termos
+        # Buscar por termos
         termos = [t.strip().upper() for t in termo.replace("\n", ",").split(",") if t.strip()]
         resultado = df[df.apply(lambda row: any(t in str(row.values).upper() for t in termos), axis=1)]
 
