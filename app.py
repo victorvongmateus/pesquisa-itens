@@ -8,7 +8,7 @@ st.set_page_config(page_title="Pesquisa de Itens", layout="wide")
 # Carrega o logo
 logo = Image.open("logo_aroeira.png")
 
-# Layout superior: logo à esquerda, título e autor à direita
+# Layout superior
 col1, col2 = st.columns([1, 6])
 with col1:
     st.image(logo, width=120)
@@ -33,10 +33,23 @@ def carregar_dados():
 
 df_base = carregar_dados()
 
-# Filtragem com busca específica
+# Filtro
 if termo_busca:
     termo_busca = termo_busca.strip().upper()
+
     filtro = df_base.apply(
         lambda row: termo_busca in str(row.get("DESCRICAO", "")).upper()
-                 or termo_busca in str(row.get("DESCRIÇÃO ANTIGA", "")).upper()
-                 or termo_busca in str(row.get("CODIGO", "")).upper(),
+        or termo_busca in str(row.get("DESCRIÇÃO ANTIGA", "")).upper()
+        or termo_busca in str(row.get("CODIGO", "")).upper(),
+        axis=1
+    )
+
+    df_filtrado = df_base[filtro]
+
+    qtde = df_filtrado.shape[0]
+    st.success(f"{qtde} item(ns) encontrado(s)." if qtde > 0 else "Nenhum resultado encontrado.")
+
+    if qtde > 0:
+        colunas_exibir = ["CODIGO", "DESCRICAO", "DESCRIÇÃO ANTIGA", "SITUACAO", "MIN", "MAX", "R$ MÉDIO"]
+        colunas_existentes = [col for col in colunas_exibir if col in df_filtrado.columns]
+        st.dataframe(df_filtrado[colunas_existentes].reset_index(drop=True), use_container_width=True)
