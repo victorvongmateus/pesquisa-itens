@@ -3,53 +3,51 @@ import pandas as pd
 from PIL import Image
 
 # Configurações da página
-st.set_page_config(page_title="Pesquisa de Itens", layout="wide")
+st.set_page_config(page_title="Pesquisa de Itens – Bioenergética Aroeira", layout="wide")
 
-# Carrega o logo
+# Carrega logo
 logo = Image.open("logo_aroeira.png")
 
-# Layout superior
-col1, col2 = st.columns([1, 6])
+# Centraliza cabeçalho com logo à esquerda e título ao lado
+col1, col2 = st.columns([1, 4])
 with col1:
-    st.image(logo, width=120)
+    st.image(logo, width=150)
 with col2:
-    st.markdown(
-        """
-        <h1 style='text-align: left; margin-bottom: 0;'>Pesquisa de Itens – Bioenergética Aroeira</h1>
-        <p style='text-align: left; font-weight: bold;'>Desenvolvido por Victor von Glehn Mateus</p>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("<h1 style='margin-bottom: 0;'>Pesquisa de Itens – Bioenergética Aroeira</h1>", unsafe_allow_html=True)
+    st.markdown("<b>Desenvolvido por Victor von Glehn Mateus</b>", unsafe_allow_html=True)
 
 # Campo de busca
-st.markdown("###")
+st.markdown("---")
 termo_busca = st.text_input("Digite o termo ou código que deseja buscar:")
 
-# Carrega a planilha
+# Carregar base
 @st.cache_data
 def carregar_dados():
     df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Base")
     return df
 
 df_base = carregar_dados()
+df_base.columns = df_base.columns.str.upper()  # Padroniza nomes das colunas
 
-# Filtro
+# Aplica filtro se houver termo
 if termo_busca:
-    termo_busca = termo_busca.strip().upper()
-
-    filtro = df_base.apply(
-        lambda row: termo_busca in str(row.get("DESCRICAO", "")).upper()
-        or termo_busca in str(row.get("DESCRIÇÃO ANTIGA", "")).upper()
-        or termo_busca in str(row.get("CODIGO", "")).upper(),
-        axis=1
-    )
-
+    termo = termo_busca.strip().lower()
+    filtro = df_base.apply(lambda row: termo in str(row.get("CODIGO", "")).lower() 
+                                      or termo in str(row.get("DESCRICAO", "")).lower()
+                                      or termo in str(row.get("DESCRIÇÃO ANTIGA", "")).lower(), axis=1)
     df_filtrado = df_base[filtro]
+else:
+    df_filtrado = pd.DataFrame()
 
-    qtde = df_filtrado.shape[0]
-    st.success(f"{qtde} item(ns) encontrado(s)." if qtde > 0 else "Nenhum resultado encontrado.")
+# Exibe resultados
+if not df_filtrado.empty:
+    st.success(f"{len(df_filtrado)} item(ns) encontrado(s).")
 
-    if qtde > 0:
-        colunas_exibir = ["CODIGO", "DESCRICAO", "DESCRIÇÃO ANTIGA", "SITUACAO", "MIN", "MAX", "R$ MÉDIO"]
-        colunas_existentes = [col for col in colunas_exibir if col in df_filtrado.columns]
-        st.dataframe(df_filtrado[colunas_existentes].reset_index(drop=True), use_container_width=True)
+    # Define colunas a exibir
+    colunas_exibir = ["CODIGO", "DESCRICAO", "DESCRIÇÃO ANTIGA", "SITUACAO", "MIN", "MAX", "R$ MÉDIO"]
+    colunas_validas = [col for col in colunas_exibir if col in df_filtrado.columns]
+
+    # Mostra a tabela sem índice
+    st.dataframe(df_filtrado[colunas_validas], use_container_width=True, hide_index=True)
+elif termo_busca:
+    st.warning("Nenhum resultado encontrado.")
