@@ -34,18 +34,4 @@ df_base = carregar_dados()
 # Filtragem
 if termo_busca:
     termo_busca = termo_busca.strip().upper()
-    filtro = df_base.apply(
-        lambda row: termo_busca in str(row.get("DESCRICAO", "")).upper()
-                    or termo_busca in str(row.get("DESCRIÇÃO ANTIGA", "")).upper(),
-        axis=1
-    )
-    df_filtrado = df_base[filtro]
-
-    qtde = df_filtrado.shape[0]
-    st.success(f"{qtde} item(ns) encontrado(s)." if qtde > 0 else "Nenhum resultado encontrado.")
-
-    # Exibe resultado sem a coluna de índice da planilha original
-    if qtde > 0:
-        colunas_exibir = ["CODIGO", "DESCRICAO", "DESCRIÇÃO ANTIGA", "SITUACAO"]
-        colunas_existentes = [col for col in colunas_exibir if col in df_filtrado.columns]
-        st.dataframe(df_filtrado[colunas_existentes], use_container_width=True)
+    filtro = df_base.ap_
