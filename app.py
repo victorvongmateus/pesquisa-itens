@@ -1,57 +1,60 @@
 import streamlit as st
 import pandas as pd
 
-# Título e descrição
+# Configurações da página
+st.set_page_config(page_title="Pesquisa de Itens - Bioenergética Aroeira", layout="wide")
+
+# Texto acima
 st.markdown("<div style='text-align: center; font-size: 14px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</div>", unsafe_allow_html=True)
+
+# Logo da Aroeira
 st.image("logo_aroeira.png", width=120)
 
-st.markdown("<h1 style='text-align: center;'>Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
+# Título
+st.markdown("<h1 style='text-align: center;'>🔍 Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
 
 # Campo de entrada
 st.write("Digite os códigos ou palavras separadas por vírgula ou enter:")
 entrada = st.text_area("", height=60)
-botao = st.button("Buscar")
 
-# Tentativa de leitura da planilha
-try:
-    df = pd.read_excel("Pesquisa de itens.xlsm")
+# Botão de busca
+if st.button("Buscar"):
+    try:
+        # Leitura da planilha
+        df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Planilha1", dtype=str)
 
-    # Remove a primeira coluna se for índice automático
-    if df.columns[0].lower() in ["", "unnamed: 0", "índice", "index"] or df.columns[0] == df.index.name:
-        df = df.iloc[:, 1:]
+        # Força todas as colunas para string
+        df = df.astype(str)
 
-    # Padroniza colunas para MAIÚSCULAS
-    df.columns = df.columns.str.upper()
+        # Transforma todas as colunas em maiúsculas
+        df.columns = df.columns.str.upper()
 
-    # Formata coluna R$ MÉDIO
-    if "R$ MÉDIO" in df.columns:
-        df["R$ MÉDIO"] = df["R$ MÉDIO"].apply(lambda x: f"R$ {x:.2f}" if pd.notna(x) else "-")
+        # Aplica maiúsculas no conteúdo
+        df = df.applymap(lambda x: x.upper())
 
-    # Busca ao clicar no botão
-    if botao:
-        termos = [termo.strip().lower() for termo in entrada.replace("\n", ",").split(",") if termo.strip() != ""]
+        # Converte valor médio para float e formata com R$
+        if "R$ MÉDIO" in df.columns:
+            df["R$ MÉDIO"] = df["R$ MÉDIO"].replace("-", "0").str.replace(",", ".", regex=False).astype(float)
+            df["R$ MÉDIO"] = df["R$ MÉDIO"].apply(lambda x: f"R$ {x:.2f}" if x > 0 else "-")
 
-        if not termos:
-            st.warning("Digite pelo menos um termo para buscar.")
+        # Divide termos por vírgula, quebra de linha ou espaço
+        termos = [t.strip().upper() for t in entrada.replace("\n", ",").replace(" ", ",").split(",") if t.strip()]
+
+        # Função para verificar se qualquer termo está presente
+        def contem_termo(linha):
+            return any(termo in linha for termo in termos)
+
+        # Aplica filtro nas colunas principais
+        colunas_busca = ["CÓDIGO", "DESCRIÇÃO"]
+        resultado = df[df[colunas_busca].apply(lambda row: contem_termo(" ".join(row)), axis=1)]
+
+        if not resultado.empty:
+            st.success(f"{len(resultado)} ITEM(NS) ENCONTRADO(S).")
+
+            # Oculta o índice e exibe resultado
+            st.dataframe(resultado.reset_index(drop=True), use_container_width=True)
         else:
-            resultado = df[
-                df.apply(lambda row: any(
-                    termo in str(row[campo]).lower()
-                    for termo in termos
-                    for campo in ["CÓDIGO", "DESCRICAO", "DESCRIÇÃO", "DESCRIÇÃO REDUZIDA", "DESCRIÇÃO ANTIGA"]
-                    if campo in df.columns
-                ), axis=1)
-            ]
+            st.warning("Nenhum item encontrado.")
 
-            if not resultado.empty:
-                st.success(f"{len(resultado)} item(ns) encontrado(s).")
-                # Exibe o resultado sem a coluna CÓDIGO
-                resultado_sem_codigo = resultado.drop(columns=["CÓDIGO"]) if "CÓDIGO" in resultado.columns else resultado
-                st.dataframe(resultado_sem_codigo, use_container_width=True)
-            else:
-                st.warning("Nenhum item encontrado.")
-
-except FileNotFoundError:
-    st.error("Erro ao carregar planilha: Arquivo 'Pesquisa de itens.xlsm' não encontrado.")
-except Exception as e:
-    st.error(f"Erro ao processar a planilha: {e}")
+    except Exception as e:
+        st.error(f"Erro ao carregar planilha: {e}")
