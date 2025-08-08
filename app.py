@@ -40,14 +40,3 @@ if termo_busca:
         lambda row: termo_busca in str(row.get("DESCRICAO", "")).upper()
                  or termo_busca in str(row.get("DESCRIÇÃO ANTIGA", "")).upper()
                  or termo_busca in str(row.get("CODIGO", "")).upper(),
-        axis=1
-    )
-    df_filtrado = df_base[filtro]
-
-    qtde = df_filtrado.shape[0]
-    st.success(f"{qtde} item(ns) encontrado(s)." if qtde > 0 else "Nenhum resultado encontrado.")
-
-    if qtde > 0:
-        colunas_exibir = ["CODIGO", "DESCRICAO", "DESCRIÇÃO ANTIGA", "SITUACAO"]
-        colunas_existentes = [col for col in colunas_exibir if col in df_filtrado.columns]
-        st.dataframe(df_filtrado[colunas_existentes].reset_index(drop=True), use_container_width=True)
