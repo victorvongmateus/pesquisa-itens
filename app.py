@@ -2,54 +2,50 @@ import streamlit as st
 import pandas as pd
 from PIL import Image
 
+# Configurações da página
 st.set_page_config(page_title="Pesquisa de Itens", layout="wide")
 
-# Layout superior: logo à esquerda, título e nome à direita
-col1, col2 = st.columns([1, 4])
+# Carrega logo
+logo = Image.open("logo_aroeira.png")
 
+# Layout superior com logo à esquerda e título + autor centralizados
+col1, col2 = st.columns([1, 6])
 with col1:
-    try:
-        logo = Image.open("logo_aroeira.png")
-        st.image(logo, width=120)
-    except:
-        st.write("Logo não encontrada")
-
+    st.image(logo, width=120)
 with col2:
     st.markdown(
-        """
-        <div style="display: flex; flex-direction: column; justify-content: center;">
-            <h1 style="margin-bottom: 0;">Pesquisa de Itens – Bioenergética Aroeira</h1>
-            <p style="font-weight: bold; font-size: 16px; margin-top: 5px;">
-                Desenvolvido por Victor von Glehn Mateus
-            </p>
-        </div>
-        """,
+        "<h1 style='text-align: left; margin-bottom: 0;'>Pesquisa de Itens – Bioenergética Aroeira</h1>"
+        "<p style='text-align: left; font-weight: bold;'>Desenvolvido por Victor von Glehn Mateus</p>",
         unsafe_allow_html=True
     )
 
-# Leitura da base de dados
-df_base = pd.read_excel("Pesquisa de itens.xlsm", engine="openpyxl")
-df_base.columns = df_base.columns.str.strip().str.upper()
-
 # Campo de busca
+st.markdown("###")
 termo_busca = st.text_input("Digite o termo ou código que deseja buscar:")
 
-if termo_busca:
-    termos = termo_busca.strip().upper().split()
+# Carrega a planilha
+@st.cache_data
+def carregar_dados():
+    df = pd.read_excel("Pesquisa de itens.xlsm", sheet_name="Base")
+    return df
 
-    # Aplica filtro
+df_base = carregar_dados()
+
+# Filtragem
+if termo_busca:
+    termo_busca = termo_busca.strip().upper()
     filtro = df_base.apply(
-        lambda row: any(
-            termo in str(row.get("CODIGO", "")).upper() or termo in str(row.get("DESCRICAO", "")).upper()
-            for termo in termos
-        ),
+        lambda row: termo_busca in str(row.get("DESCRICAO", "")).upper()
+                    or termo_busca in str(row.get("DESCRIÇÃO ANTIGA", "")).upper(),
         axis=1
     )
+    df_filtrado = df_base[filtro]
 
-    resultados = df_base[filtro]
+    qtde = df_filtrado.shape[0]
+    st.success(f"{qtde} item(ns) encontrado(s)." if qtde > 0 else "Nenhum resultado encontrado.")
 
-    if not resultados.empty:
-        st.success(f"{len(resultados)} item(ns) encontrado(s).")
-        st.dataframe(resultados.reset_index(drop=True), use_container_width=True)
-    else:
-        st.warning("Nenhum resultado encontrado.")
+    # Exibe resultado sem a coluna de índice da planilha original
+    if qtde > 0:
+        colunas_exibir = ["CODIGO", "DESCRICAO", "DESCRIÇÃO ANTIGA", "SITUACAO"]
+        colunas_existentes = [col for col in colunas_exibir if col in df_filtrado.columns]
+        st.dataframe(df_filtrado[colunas_existentes], use_container_width=True)
