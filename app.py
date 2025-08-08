@@ -16,18 +16,18 @@ botao = st.button("Buscar")
 try:
     df = pd.read_excel("Pesquisa de itens.xlsm")
 
-    # Remove a primeira coluna se ela for de índice automático (0, 1, 2...)
+    # Remove a primeira coluna se for índice automático
     if df.columns[0].lower() in ["", "unnamed: 0", "índice", "index"] or df.columns[0] == df.index.name:
         df = df.iloc[:, 1:]
 
-    # Padronizar colunas para MAIÚSCULAS
+    # Padroniza colunas para MAIÚSCULAS
     df.columns = df.columns.str.upper()
 
-    # Formatar a coluna de R$ MÉDIO (caso exista)
+    # Formata coluna R$ MÉDIO
     if "R$ MÉDIO" in df.columns:
         df["R$ MÉDIO"] = df["R$ MÉDIO"].apply(lambda x: f"R$ {x:.2f}" if pd.notna(x) else "-")
 
-    # Quando o botão é pressionado
+    # Busca ao clicar no botão
     if botao:
         termos = [termo.strip().lower() for termo in entrada.replace("\n", ",").split(",") if termo.strip() != ""]
 
@@ -45,7 +45,9 @@ try:
 
             if not resultado.empty:
                 st.success(f"{len(resultado)} item(ns) encontrado(s).")
-                st.dataframe(resultado, use_container_width=True)
+                # Exibe o resultado sem a coluna CÓDIGO
+                resultado_sem_codigo = resultado.drop(columns=["CÓDIGO"]) if "CÓDIGO" in resultado.columns else resultado
+                st.dataframe(resultado_sem_codigo, use_container_width=True)
             else:
                 st.warning("Nenhum item encontrado.")
 
