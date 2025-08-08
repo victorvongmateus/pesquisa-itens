@@ -4,7 +4,7 @@ from PIL import Image
 
 st.set_page_config(page_title="Pesquisa de Itens", layout="centered")
 
-# Logo centralizada corretamente
+# Logo centralizada
 try:
     logo = Image.open("logo_aroeira.png")
     st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
@@ -13,20 +13,20 @@ try:
 except:
     pass
 
-# Desenvolvido por (logo abaixo da logo)
+# Desenvolvido por (negrito, centralizado)
 st.markdown(
     """
-    <div style="text-align: center; font-size: 16px; margin-top: -10px; margin-bottom: 30px;">
+    <div style="text-align: center; font-size: 16px; font-weight: bold; margin-top: -10px; margin-bottom: 30px;">
         Desenvolvido por Victor von Glehn Mateus
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# Título (sem a lupa)
-st.markdown("<h1 style='text-align: center;'>Pesquisa de Itens</h1>", unsafe_allow_html=True)
+# Novo título centralizado
+st.markdown("<h1 style='text-align: center;'>Pesquisa de Itens – Bioenergética Aroeira</h1>", unsafe_allow_html=True)
 
-# Carrega base
+# Leitura da base
 df_base = pd.read_excel("Pesquisa de itens.xlsm", engine="openpyxl")
 df_base.columns = df_base.columns.str.strip().str.upper()
 
@@ -39,15 +39,4 @@ if termo_busca:
     filtro = df_base.apply(
         lambda row: any(
             termo in str(row.get("CODIGO", "")).upper() or termo in str(row.get("DESCRICAO", "")).upper()
-            for termo in termos
-        ),
-        axis=1
-    )
-
-    resultados = df_base[filtro]
-
-    if not resultados.empty:
-        st.success(f"{len(resultados)} item(ns) encontrado(s).")
-        st.dataframe(resultados)
-    else:
-        st.warning("Nenhum resultado encontrado.")
+            for term
