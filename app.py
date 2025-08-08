@@ -5,19 +5,29 @@ from PIL import Image
 # --- CONFIGURAÇÕES INICIAIS ---
 st.set_page_config(layout="wide")
 
-# --- FUNÇÃO PARA FORMATAR OS CAMPOS NUMÉRICOS ---
+# --- FUNÇÃO PARA FORMATAR CAMPOS NUMÉRICOS ---
 def formatar_colunas(df):
     df.columns = [col.upper() for col in df.columns]
     if 'R$ MÉDIO' in df.columns:
         df['R$ MÉDIO'] = df['R$ MÉDIO'].apply(lambda x: f"R$ {x:,.2f}".replace(".", ","))
     return df
 
-# --- LOGO E TÍTULO ---
+# --- LOGO E TÍTULOS ---
 logo = Image.open("logo_aroeira.png")
-st.image(logo, width=130)
+st.markdown(
+    f"<div style='text-align:center'><img src='data:image/png;base64,{st.image_to_base64(logo)}' width='120'></div>",
+    unsafe_allow_html=True,
+)
 
-st.markdown("<h5 style='text-align: center;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</h5>", unsafe_allow_html=True)
-st.markdown("<h1 style='text-align: center;'>🔍 Pesquisa de Itens - Bioenergética Aroeira</h1>", unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align:center; font-size:13px;'>Desenvolvido por Victor von Glehn - Especialista de Engenharia Agrícola</p>",
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    "<h2 style='text-align:center;'>Pesquisa de Itens - Bioenergética Aroeira</h2>",
+    unsafe_allow_html=True
+)
 
 # --- CAMPO DE ENTRADA ---
 st.markdown("Digite os códigos ou palavras separadas por vírgula ou enter:")
