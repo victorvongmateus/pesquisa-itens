@@ -1,30 +1,22 @@
 import streamlit as st
 import pandas as pd
+from PIL import Image
 
 st.set_page_config(page_title="Pesquisa de Itens", layout="centered")
 
-# Logo
-st.markdown(
-    """
-    <div style="text-align: center;">
-        <img src="logo_aroeira.png" width="200"/>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Mostra logo
+try:
+    logo = Image.open("logo_aroeira.png")
+    st.image(logo, width=200)
+except:
+    pass  # Evita erro se a imagem estiver ausente
 
-# Título
+# Título centralizado
 st.markdown("<h1 style='text-align: center;'>🔍 Pesquisa de Itens</h1>", unsafe_allow_html=True)
 
-# Lê a planilha fixa
+# Lê planilha
 df_base = pd.read_excel("Pesquisa de itens.xlsm", engine="openpyxl")
 df_base.columns = df_base.columns.str.strip().str.upper()
-
-# DEBUG TEMPORÁRIO
-st.write("📋 Primeiras linhas da base:")
-st.dataframe(df_base.head())
-
-st.write("🔎 Colunas disponíveis:", df_base.columns.tolist())
 
 # Campo de busca
 termo_busca = st.text_input("Digite o termo ou código que deseja buscar:")
